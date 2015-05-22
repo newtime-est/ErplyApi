@@ -30,12 +30,25 @@ class ErplyApi extends EApi
 			if($this->sessionKey==null || $this->sessionKeyExpires=== null || $this->sessionKeyExpires < time()){
 				$this->downloadSessionKey();
 			}
-			return $this->sessionKey;
-		}else{
+		}else{			
 			if(!isset($_SESSION))
 				session_start();
-			return parent::getSessionKey();
+			
+			if(
+				!isset($_SESSION['EAPIsessionKey']) ||
+				!isset($_SESSION['EAPIsessionKeyExpires']) || 
+				$_SESSION['EAPIsessionKey']===null || 
+				$_SESSION['EAPIsessionKeyExpires']=== null || 
+				$_SESSION['EAPIsessionKeyExpires'] < time()
+			){
+				$this->downloadSessionKey();
+			}
+
+			$_SESSION['EAPIsessionKey']=$this->sessionKey;
+			$_SESSION['EAPIsessionKeyExpires']=$this->sessionKeyExpires;
 		}
+		
+		return $this->sessionKey;
 	}
 	public function downloadSessionKey()
 	{
