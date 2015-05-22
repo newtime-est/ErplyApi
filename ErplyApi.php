@@ -32,6 +32,8 @@ class ErplyApi extends EApi
 			}
 			return $this->sessionKey;
 		}else{
+			if(!isset($_SESSION))
+				session_start();
 			return parent::getSessionKey();
 		}
 	}
