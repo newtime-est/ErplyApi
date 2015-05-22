@@ -4,6 +4,9 @@
 */
 class ErplyApi extends EApi
 {
+	private $sessionKey;
+	private $sessionKeyExpires;
+
 	public function sendRequest($request, $parameters = array())
 	{
 		$response=json_decode(parent::sendRequest($request, $parameters));
@@ -22,37 +25,29 @@ class ErplyApi extends EApi
 	}
 
 	protected function getSessionKey() 
-	{
-		//test for session
-		if(!isset($_SESSION)){
-			session_start();
-		}
-		//if no session key or key expired, then obtain it
-		if(
-			!isset($_SESSION['EAPISessionKey'][$this->clientCode][$this->username]) ||
-			!isset($_SESSION['EAPISessionKeyExpires'][$this->clientCode][$this->username]) ||
-			$_SESSION['EAPISessionKeyExpires'][$this->clientCode][$this->username] < time()
-		) {
-			//make request
-			$result = $this->verifyUser(array("username" => $this->username, "password" => $this->password));
-
-			//check failure
-			if(!isset($result->records[0]->sessionKey)) {
-				unset($_SESSION['EAPISessionKey'][$this->clientCode][$this->username]);
-				unset($_SESSION['EAPISessionKeyExpires'][$this->clientCode][$this->username]);
-				
-				$e = new Exception('Verify user failure', self::VERIFY_USER_FAILURE);
-				$e->response = $result;
-				throw $e;
+	{	
+		if($this->isCLI()){
+			if($this->sessionKey==null || $this->sessionKeyExpires=== null || $this->sessionKeyExpires < time()){
+				$this->downloadSessionKey();
 			}
-			
-			//cache the key in PHP session
-			$_SESSION['EAPISessionKey'][$this->clientCode][$this->username] = $result->records[0]->sessionKey;
-			$_SESSION['EAPISessionKeyExpires'][$this->clientCode][$this->username] = time() + $result->records[0]->sessionLength - 30;
-			
+			return $this->sessionKey;
+		}else{
+			return parent::getSessionKey();
 		}
-
-		//return cached key
-		return $_SESSION['EAPISessionKey'][$this->clientCode][$this->username];
+	}
+	public function downloadSessionKey()
+	{
+		$result = $this->verifyUser(array("username" => $this->username, "password" => $this->password));
+		if(!isset($result->records[0]->sessionKey)) {
+			$e = new Exception('Verify user failure', self::VERIFY_USER_FAILURE);
+			$e->response = $result;
+			throw $e;
+		}
+		$this->sessionKey=$result->records[0]->sessionKey;
+		$this->sessionKeyExpires=time() + $result->records[0]->sessionLength - 30;
+	}
+	public function isCLI()
+	{
+		return (!isset($_SERVER['SERVER_SOFTWARE']) && (php_sapi_name() == 'cli' || (is_numeric($_SERVER['argc']) && $_SERVER['argc'] > 0)));
 	}
 }
