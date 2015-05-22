@@ -33,7 +33,7 @@ class ErplyApi extends EApi
 		}else{			
 			if(!isset($_SESSION))
 				session_start();
-			
+
 			if(
 				!isset($_SESSION['EAPIsessionKey']) ||
 				!isset($_SESSION['EAPIsessionKeyExpires']) || 
@@ -42,6 +42,9 @@ class ErplyApi extends EApi
 				$_SESSION['EAPIsessionKeyExpires'] < time()
 			){
 				$this->downloadSessionKey();
+			}else{
+				$this->sessionKey=$_SESSION['EAPIsessionKey'];
+				$this->sessionKeyExpires=$_SESSION['EAPIsessionKeyExpires'];
 			}
 
 			$_SESSION['EAPIsessionKey']=$this->sessionKey;
