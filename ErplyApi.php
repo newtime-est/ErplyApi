@@ -21,7 +21,28 @@ class ErplyApi extends EApi
 	}
 	public function bulkRequest()
 	{
-		return json_decode(call_user_func_array(array('parent','bulkRequest'),func_get_args()));
+		$return = json_decode(call_user_func_array(array('parent','bulkRequest'),func_get_args()));
+		if ($return->status->errorCode == 0) {
+			$requests = array();
+			usort($return->requests, function($a, $b) {
+				if (($a->status->requestID === null) == ($b->status->requestID === null)) {
+					return 0;
+				}
+				if ($a->status->requestID === null) {
+					return 1;
+				}
+				return -1;
+			});
+			foreach ($return->requests as $request) {
+				if (empty($request->status->requestID)) {
+					$requests[] = $request;
+				} else {
+					$requests[$request->status->requestID] = $request;
+				}
+			}
+			$return->requests = $requests;
+		}
+		return $return;
 	}
 
 	protected function getSessionKey() 
