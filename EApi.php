@@ -91,7 +91,7 @@ class EApi
 		curl_setopt($handle, CURLOPT_RETURNTRANSFER, 1);
 		
 		//create errors on timeout and on response code >= 300
-		curl_setopt($handle, CURLOPT_TIMEOUT, 45);
+		curl_setopt($handle, CURLOPT_TIMEOUT, 120);
 		curl_setopt($handle, CURLOPT_FAILONERROR, true);
 		curl_setopt($handle, CURLOPT_FOLLOWLOCATION, false);
 		
