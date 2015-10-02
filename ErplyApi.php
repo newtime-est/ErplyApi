@@ -11,7 +11,11 @@ class ErplyApi extends EApi
 	{
 		$response=json_decode(parent::sendRequest($request, $parameters));
 		if($response && $response->status && $response->status->responseStatus=='error'){
-			throw new Exception("Erply Api error: ". $response->status->errorCode, $response->status->errorCode);
+			$message = "Erply Api error: ". $response->status->errorCode;
+			if (isset($response->status->errorField)) {
+				$message .= ': '.$response->status->errorField;
+			}
+			throw new Exception($message, $response->status->errorCode);
 		}
 		return $response;
 	}
