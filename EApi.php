@@ -25,6 +25,7 @@ class EApi
 	{
 		//validate that all required parameters are set
 		if(!$this->url OR !$this->clientCode OR !$this->username OR !$this->password){
+			Yii::log('EApi missing parameters', 'info', 'erply');
 			throw new Exception('Missing parameters', self::MISSING_PARAMETERS);
 		}
 	
@@ -64,13 +65,17 @@ class EApi
 		$error = curl_error($handle);
 		$errorNumber = curl_errno($handle);
 		curl_close($handle);
-		if($error) throw new Exception('CURL error: '.$response.':'.$error.': '.$errorNumber, self::CURL_ERROR);
+		if($error) {
+			Yii::log('EApi sendrequest error', 'info', 'erply');
+			throw new Exception('CURL error: '.$response.':'.$error.': '.$errorNumber, self::CURL_ERROR);
+		}
 		return $response;
 	}
 
 	public function bulkRequest()
 	{
 		if(!$this->url OR !$this->clientCode OR !$this->username OR !$this->password){
+			Yii::log('Bulk missing parameters', 'info', 'erply');
 			throw new Exception('Missing parameters', self::MISSING_PARAMETERS);
 		}
 		
@@ -109,7 +114,10 @@ class EApi
 		$error = curl_error($handle);
 		$errorNumber = curl_errno($handle);
 		curl_close($handle);
-		if($error) throw new Exception('CURL error: '.$response.':'.$error.': '.$errorNumber, self::CURL_ERROR);
+		if($error) {
+			Yii::log('EApi bulkrequest error', 'info', 'erply');
+			throw new Exception('CURL error: '.$response.':'.$error.': '.$errorNumber, self::CURL_ERROR);
+		}
 		return $response;
 	}
 	
@@ -135,6 +143,7 @@ class EApi
 				
 				$e = new Exception('Verify user failure', self::VERIFY_USER_FAILURE);
 				$e->response = $response;
+				Yii::log('Verify user failure', 'info', 'erply');
 				throw $e;
 			}
 			

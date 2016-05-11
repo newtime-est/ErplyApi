@@ -15,6 +15,7 @@ class ErplyApi extends EApi
 			if (isset($response->status->errorField)) {
 				$message .= ': '.$response->status->errorField;
 			}
+			Yii::log('ErplyApi sendrequest: '.$message, 'info', 'erply');
 			throw new Exception($message, $response->status->errorCode);
 		}
 		return $response;
@@ -84,6 +85,7 @@ class ErplyApi extends EApi
 		if(!isset($result->records[0]->sessionKey)) {
 			$e = new Exception('Verify user failure', self::VERIFY_USER_FAILURE);
 			$e->response = $result;
+			Yii::log('Verify user failure', 'info', 'erply');
 			throw $e;
 		}
 		$this->sessionKey=$result->records[0]->sessionKey;
