@@ -5,13 +5,13 @@ class EApi
 	const CURL_ERROR = 2002;
 	const PHP_SESSION_NOT_STARTED = 2003;
 	const MISSING_PARAMETERS = 2004;
-	
+
 	public $url;
 	public $clientCode;
 	public $username;
 	public $password;
 	public $sslCACertPath;
-	
+
 	public function __construct($url = null, $clientCode = null, $username = null, $password = null, $sslCACertPath = null)
 	{
 		$this->url = $url;
@@ -20,7 +20,7 @@ class EApi
 		$this->password = $password;
 		$this->sslCACertPath = $sslCACertPath;
 	}
-	
+
 	public function sendRequest($request, $parameters = array())
 	{
 		//validate that all required parameters are set
@@ -67,7 +67,7 @@ class EApi
 		curl_close($handle);
 		if($error) {
 			Yii::log('EApi sendrequest error', 'info', 'erply');
-			throw new Exception('CURL error: '.$response.':'.$error.': '.$errorNumber, self::CURL_ERROR);
+			throw new Exception('CURL error: '.$response.' | '.$error.': '.$errorNumber, self::CURL_ERROR);
 		}
 		return $response;
 	}
@@ -78,37 +78,45 @@ class EApi
 			Yii::log('Bulk missing parameters', 'info', 'erply');
 			throw new Exception('Missing parameters', self::MISSING_PARAMETERS);
 		}
-		
+
 		//add extra params
-		$parameters['requests'] = json_encode(func_get_args());
+		$requests = func_get_args();
+		foreach ($requests as $request) {
+			foreach (['lang', 'responseType', 'responseMode'] as $key) {
+				if (isset($request[$key])) {
+					$parameters[$key] = $request[$key];
+				}
+			}
+		}
+		$parameters['requests'] = json_encode($requests);
 		$parameters['clientCode'] = $this->clientCode;
 		$parameters['version'] = '1.0';
 		$parameters['sessionKey'] = $this->getSessionKey();
 
 		$handle = curl_init($this->url);
-		
+
 		//set the payload
 		curl_setopt($handle, CURLOPT_POST, true);
 		curl_setopt($handle, CURLOPT_POSTFIELDS, $parameters);
-		
+
 		//return body only
 		curl_setopt($handle, CURLOPT_HEADER, 0);
 		curl_setopt($handle, CURLOPT_RETURNTRANSFER, 1);
-		
+
 		//create errors on timeout and on response code >= 300
 		curl_setopt($handle, CURLOPT_TIMEOUT, 120);
 		curl_setopt($handle, CURLOPT_FAILONERROR, true);
 		curl_setopt($handle, CURLOPT_FOLLOWLOCATION, false);
-		
+
 		//set up host and cert verification
 		curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, 2);
-		curl_setopt($handle, CURLOPT_SSLVERSION,3);
+		curl_setopt($handle, CURLOPT_SSLVERSION, CURL_SSLVERSION_DEFAULT);
 		curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
 		if($this->sslCACertPath) {
 			curl_setopt($handle, CURLOPT_CAINFO, $this->sslCACertPath);
 			curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, true);
 		}
-				
+
 		//run
 		$response = curl_exec($handle);
 		$error = curl_error($handle);
@@ -116,16 +124,17 @@ class EApi
 		curl_close($handle);
 		if($error) {
 			Yii::log('EApi bulkrequest error', 'info', 'erply');
-			throw new Exception('CURL error: '.$response.':'.$error.': '.$errorNumber, self::CURL_ERROR);
+			throw new Exception('CURL error: '.$response.' | '.$error.': '.$errorNumber, self::CURL_ERROR);
 		}
+
 		return $response;
 	}
-	
-	protected function getSessionKey() 
+
+	protected function getSessionKey()
 	{
 		//test for session
 		if(!isset($_SESSION)) throw new Exception('PHP session not started', self::PHP_SESSION_NOT_STARTED);
-		
+
 		//if no session key or key expired, then obtain it
 		if(
 			!isset($_SESSION['EAPISessionKey'][$this->clientCode][$this->username]) ||
@@ -135,22 +144,22 @@ class EApi
 			//make request
 			$result = $this->sendRequest("verifyUser", array("username" => $this->username, "password" => $this->password));
 			$response = json_decode($result, true);
-			
+
 			//check failure
 			if(!isset($response['records'][0]['sessionKey'])) {
 				unset($_SESSION['EAPISessionKey'][$this->clientCode][$this->username]);
 				unset($_SESSION['EAPISessionKeyExpires'][$this->clientCode][$this->username]);
-				
+
 				$e = new Exception('Verify user failure', self::VERIFY_USER_FAILURE);
 				$e->response = $response;
 				Yii::log('Verify user failure', 'info', 'erply');
 				throw $e;
 			}
-			
+
 			//cache the key in PHP session
 			$_SESSION['EAPISessionKey'][$this->clientCode][$this->username] = $response['records'][0]['sessionKey'];
 			$_SESSION['EAPISessionKeyExpires'][$this->clientCode][$this->username] = time() + $response['records'][0]['sessionLength'] - 30;
-			
+
 		}
 
 		//return cached key
